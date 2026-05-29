@@ -1,0 +1,30 @@
+# Configuração do Supabase CLI. `project_id` é o ref do projeto remoto (preencher ao linkar:
+# `npx supabase link --project-ref <ref>`). O bloco abaixo também rege o stack local (requer Docker).
+project_id = "cashdireto"
+
+[api]
+enabled = true
+port = 54321
+# Expõe o schema `core` à API REST/realtime (além dos defaults). Sem isso o app não enxerga core.
+schemas = ["public", "core", "graphql_public"]
+extra_search_path = ["public", "core"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[storage]
+enabled = true
+file_size_limit = "200MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+jwt_expiry = 3600
+enable_signup = true
+
+[studio]
+enabled = true
+port = 54323
