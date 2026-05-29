@@ -1,0 +1,66 @@
+<!doctype html><html><head><title>Relatórios da Análise</title></head><body>
+<!-- shell Angular (deve ser IGNORADO pelo parser): menu com rótulos que colidem -->
+<ul _ngcontent-x=""><li><a href="/estimated-income">Faturamento Estimado</a></li>
+<li><a href="/agenda">Histórico de agenda</a></li></ul>
+
+<!-- dashboard React (escopo do parser) -->
+<div class="cerc-web-react-customer-x-ray-root">
+
+  <!-- Cadastro -->
+  <div class="dashboardCardGridBox">
+    <div><h4>EMPRESA EXEMPLO LTDA</h4><h5>11.111.111/0001-11</h5></div>
+    <div><h4>Natureza Jurídica</h4><h5>SOCIEDADE LIMITADA</h5></div>
+    <div><h4>Setor Econômico</h4><h5>COMERCIO</h5></div>
+    <div><h4>Situação Cadastral</h4><h5>ATIVA</h5></div>
+  </div>
+
+  <!-- Cards -->
+  <div><h4>Nível de Comprometimento</h4><span>0%</span>
+    <svg aria-label="Mede a relação de agenda contratada futura e as agendas a receber."></svg></div>
+  <div><h4>Faturamento Estimado</h4><span>R$ 1K</span>
+    <div aria-label="R$ 1.000,00"></div>
+    <svg aria-label="É a estimativa de faturamento baseada no histórico real do estabelecimento."></svg></div>
+  <div><h4>Potencial de ChargeBack</h4><span>0%</span>
+    <svg aria-label="Mede a probabilidade de chargeback com base nas ocorrências."></svg></div>
+  <div><h4>Faturamento Médio Diário</h4><span>R$ 18,26</span><span>98% abaixo do setor</span></div>
+  <div><h4>Agenda Mensal Média</h4><span>R$ 150</span>
+    <div aria-label="R$ 150,00"></div>
+    <svg aria-label="Média mensal das agendas liquidadas pelo estabelecimento comercial."></svg></div>
+  <div><h4>Histórico de Agenda</h4><span>R$ 300</span>
+    <div aria-label="R$ 300,00"></div>
+    <svg aria-label="Soma dos últimos 12 meses de agendas liquidadas pelo estabelecimento."></svg></div>
+  <div><h4>Volume de Antecipação</h4><span>R$ 200</span>
+    <div aria-label="R$ 200,00"></div>
+    <svg aria-label="Soma dos últimos 12 meses de antecipação realizada pelo estabelecimento."></svg></div>
+  <div><h4>Constatações críticas outros ativos</h4><span>9</span></div>
+  <div><h4>Fraudes Detectadas</h4><span>0</span></div>
+  <div><h4>Índice de Conformidade e Risco</h4><span>100</span></div>
+
+  <!-- Gráfico (Recharts): eixo Y rotulado + 2 séries × 2 meses.
+       escala: y=0 -> R$300, y=300 -> R$0  (R$ por pixel = 1)
+       agenda:  mai=100, jun=200 (soma 300 = card Histórico de Agenda)
+       volume:  mai=50,  jun=150 (soma 200 = card Volume de Antecipação) -->
+  <svg>
+    <text x="42" y="0">R$ 300</text>
+    <text x="42" y="300">R$ 0,00</text>
+    <text x="100" y="375">mai</text><text x="100" y="388">2025</text>
+    <text x="200" y="375">jun</text><text x="200" y="388">2025</text>
+    <path class="recharts-rectangle" d="M 90,200 h 28 v 100 h -28 Z"></path>
+    <path class="recharts-rectangle" d="M 110,250 h 28 v 50 h -28 Z"></path>
+    <path class="recharts-rectangle" d="M 190,100 h 28 v 200 h -28 Z"></path>
+    <path class="recharts-rectangle" d="M 210,150 h 28 v 150 h -28 Z"></path>
+  </svg>
+
+  <!-- Quadro de relacionamentos -->
+  <h2>Quadro de Relacionamentos</h2>
+  <div>Sócios em Comum</div>
+  <span>1</span><span>EMPRESA SOCIA A LTDA</span>
+  <span>2</span><span>EMPRESA SOCIA B LTDA</span>
+  <div>Instituições de Pagamento</div>
+  <span>IP UM S.A.</span><span>99%</span>
+  <span>IP DOIS S.A.</span><span>1%</span>
+  <div>Financiadores</div>
+  <span>FIN ALPHA S.A.</span><span>80%</span>
+  <span>FIN BETA S.A.</span><span>20%</span>
+
+</div></body></html>

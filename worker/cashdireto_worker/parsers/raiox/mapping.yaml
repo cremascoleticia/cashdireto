@@ -1,0 +1,32 @@
+# De-para RAIOX → core. Fonte da verdade: docs/fontes/RAIOX.md. Parser: parser.py.
+fonte: RAIOX
+formato: html            # página de SPA salva (React/Recharts); classes CSS hasheadas (não usar)
+granularidade: 1 arquivo = 1 cliente (titular)
+escopo_dom: "subárvore com classe *customer-x-ray* (ignora shell Angular: menu/notificações)"
+
+cadastro:               # grid <h4>rótulo</h4><h5>valor</h5> → enriquece core.titular
+  razao_social: titular.razao_social
+  cnpj: titular.cnpj
+  "Natureza Jurídica": titular.natureza_juridica
+  "Setor Econômico": titular.setor_economico
+  "Situação Cadastral": titular.situacao_cadastral
+
+cards:                  # → core.raiox_indicador (origem CERC). Valor exato vem do aria-label.
+  origem_valor: "monetários abreviados (R$10M etc.) → aria-label; demais → texto"
+  definicao: "do aria-label do ícone de info (casada por palavra distintiva)"
+  chaves: [nivel_comprometimento, faturamento_estimado, potencial_chargeback,
+           faturamento_medio_diario, agenda_mensal_media, historico_agenda,
+           volume_antecipacao, constatacoes_criticas, fraudes_detectadas, indice_conformidade_risco]
+  unidades: {reais: [faturamento_estimado, faturamento_medio_diario, agenda_mensal_media, historico_agenda, volume_antecipacao],
+             percentual: [nivel_comprometimento, potencial_chargeback],
+             contagem: [constatacoes_criticas, fraudes_detectadas], indice: [indice_conformidade_risco]}
+
+serie_mensal:           # → core.raiox_serie_mensal (agenda, volume_antecipacao)
+  origem: "geometria das barras Recharts (SVG) + escala do eixo Y (ticks rotulados)"
+  reconciliacao: "Σ(agenda)=card historico_agenda e Σ(volume)=card volume_antecipacao; senão FALHA"
+  excluido: "linha de % (nível de comprometimento) — eixo secundário sem ticks; não extraída"
+
+relacionamentos:        # → core.raiox_relacionamento
+  tipos: {socio_comum: "sem %", instituicao_pagamento: "nome + %", financiador: "nome + %"}
+
+data_referencia: "token _YYYYMMDD_ no nome, senão data da análise (HTML não traz data do dossiê)"

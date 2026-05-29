@@ -11,7 +11,7 @@ Status das fontes:
 | Fonte  | Ficha | Amostra | Status               |
 |--------|-------|---------|----------------------|
 | RADAR  | ✅    | ✅      | **parseado/validado** (Fase 1a — `agenda_ur` tidy) |
-| RAIOX  | ❌    | ❌      | PENDENTE_DICIONARIO  |
+| RAIOX  | ✅    | ✅      | **parseado/validado** (Fase 1a — HTML; cadastro/cards/série/relacionamentos) |
 | AP005  | ❌    | ❌      | PENDENTE_DICIONARIO  |
 | AP007  | ❌    | ❌      | PENDENTE_DICIONARIO  |
 | AP013A | ❌    | ❌      | PENDENTE_DICIONARIO  |
