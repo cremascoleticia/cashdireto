@@ -1,0 +1,40 @@
+# De-para RADAR → core.agenda_ur (modelo tidy). Fonte da verdade: docs/fontes/RADAR.md.
+# Documentação do parser; o parser (parser.py) é a implementação.
+fonte: RADAR
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ","
+decimal: "."
+cabecalho: true
+
+# data_referencia não vem em coluna: extraída do nome do arquivo, com fallback.
+data_referencia:
+  origem: nome_arquivo
+  regex: "_(\\d{8})_"      # token _YYYYMMDD_ (padrão CERC)
+  formato: "%Y%m%d"
+  fallback: data_da_analise # se o nome não tiver token de data válido
+
+# Colunas de identificação (origem → canônico)
+identificacao:
+  documento_estabelecimento_comercial: estabelecimento_cnpj  # + resolve titular_id (1 estab = 1 titular)
+  documento_credenciadora_sub:         credenciadora_doc
+  razao_social_credenciadora:          credenciadora_nome
+  arranjo:                             arranjo               # guardado cru, sem decodificar
+
+# As 20 colunas valor_<situacao>_<janela> sofrem UNPIVOT (largo → tidy):
+# cada célula vira uma linha (situacao, janela, valor) — TODAS as células, inclusive zeros.
+unpivot:
+  prefixo: "valor_"
+  situacoes:  [livre, pre, comprometido, constituido]
+  janelas:    ["0_30", "31_60", "61_90", "91_120", "120_mais"]
+  destino:    {situacao: situacao, janela: janela, valor: valor}
+
+validacoes:
+  - cabecalho == 24 colunas exatas (id + 20 valores); senão erro (não adivinha)
+  - valor numérico e >= 0
+  - estabelecimento_cnpj e arranjo não vazios
+
+# NÃO derivamos relação entre situações (constituido != livre+comprometido em parte da amostra).
+observacoes:
+  - "valor_pre: significado não confirmado; 100% zerado na amostra."
+  - "relação entre situações é assunto da Fase 1b/2, não do parser."

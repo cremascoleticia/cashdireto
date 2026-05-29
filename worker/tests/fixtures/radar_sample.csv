@@ -1,0 +1,5 @@
+documento_estabelecimento_comercial,documento_credenciadora_sub,razao_social_credenciadora,arranjo,valor_livre_0_30,valor_livre_31_60,valor_livre_61_90,valor_livre_91_120,valor_livre_120_mais,valor_pre_0_30,valor_pre_31_60,valor_pre_61_90,valor_pre_91_120,valor_pre_120_mais,valor_comprometido_0_30,valor_comprometido_31_60,valor_comprometido_61_90,valor_comprometido_91_120,valor_comprometido_120_mais,valor_constituido_0_30,valor_constituido_31_60,valor_constituido_61_90,valor_constituido_91_120,valor_constituido_120_mais
+12345678000101,11111111000111,CRED ALPHA,MCC,100,50,0,0,0,0,0,0,0,0,200,10,0,0,0,300,60,0,0,0
+12345678000101,11111111000111,CRED ALPHA,VCC,10,5,0,0,0,0,0,0,0,0,90,5,0,0,0,80,10,0,0,0
+12345678000102,22222222000122,CRED BETA,CBC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,34.18,0,0,0
+99887766000100,11111111000111,CRED ALPHA,MCC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
