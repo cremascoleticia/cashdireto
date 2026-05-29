@@ -52,7 +52,7 @@ begin
 
   -- ...e NUNCA o titular B
   select count(*) into n from core.titular where alias = 'T-BBB';
-  if n <> 0 then raise exception 'FAIL: titular B (T-BBB) visivel para usuario A', n; end if;
+  if n <> 0 then raise exception 'FAIL: titular B (T-BBB) visivel para usuario A'; end if;
 
   -- A enxerga só o arquivo do próprio titular
   select count(*) into n from core.fonte_arquivo;
