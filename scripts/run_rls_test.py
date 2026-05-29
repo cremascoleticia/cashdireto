@@ -50,14 +50,21 @@ def main() -> int:
     print(f"[run_rls_test] driver={driver}  alvo={dsn.split('@')[-1]}")
 
     try:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-        # NOTICEs ficam em conn.notices (psycopg2) / conn.notices é deprecado no psycopg3,
-        # mas a ausência de exceção já comprova que todas as asserções passaram.
-        notices = getattr(conn, "notices", None)
-        if notices:
-            for n in notices:
+        if driver == "psycopg3":
+            # O script tem vários comandos; o protocolo estendido do psycopg3 não aceita isso.
+            # Usamos o protocolo simples do libpq (PQexec), que executa o batch inteiro.
+            from psycopg import pq
+
+            res = conn.pgconn.exec_(sql.encode("utf-8"))
+            if res.status in (pq.ExecStatus.FATAL_ERROR, pq.ExecStatus.NONFATAL_ERROR):
+                raise RuntimeError(res.error_message.decode("utf-8", "replace").strip())
+        else:
+            # psycopg2 usa o protocolo simples — aceita múltiplos comandos num execute().
+            with conn.cursor() as cur:
+                cur.execute(sql)
+            for n in getattr(conn, "notices", []) or []:
                 print("  " + str(n).strip())
+        # Ausência de exceção = todas as asserções do .sql passaram.
         print("[run_rls_test] PASS — RLS bloqueia acesso cross-titular.")
         return 0
     except Exception as exc:  # noqa: BLE001 — queremos qualquer erro do banco como falha

@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: supabase/postgres:15.1.0.117
+        image: postgres:15
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
@@ -35,24 +35,24 @@ jobs:
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      PGURL: postgres://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: Install psql + driver
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
           python -m pip install --upgrade pip && pip install "psycopg[binary]"
-      - name: Bootstrap roles/extensões esperados pelo Supabase
-        # A imagem supabase/postgres já traz auth.uid()/roles; garantimos idempotência.
-        run: |
-          psql "$PGURL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgcrypto;"
+      - name: Shim dos objetos do Supabase (roles, auth.*, storage.*) no Postgres puro
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ci/supabase_shim.sql
       - name: Aplicar migrations do zero (ordem por nome de arquivo)
         run: |
           for f in $(ls supabase/migrations/*.sql | sort); do
             echo ">> $f"
-            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Teste de RLS cross-titular
-        env:
-          DATABASE_URL: ${{ env.PGURL }}
-        run: python scripts/run_rls_test.py
+        # psql lida com o script multi-statement; ON_ERROR_STOP=1 falha o job se a asserção disparar.
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_cross_titular.sql
