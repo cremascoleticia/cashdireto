@@ -10,7 +10,7 @@ Status das fontes:
 
 | Fonte  | Ficha | Amostra | Status               |
 |--------|-------|---------|----------------------|
-| RADAR  | ❌    | ❌      | PENDENTE_DICIONARIO  |
+| RADAR  | ✅    | ✅      | **parseado/validado** (Fase 1a — `agenda_ur` tidy) |
 | RAIOX  | ❌    | ❌      | PENDENTE_DICIONARIO  |
 | AP005  | ❌    | ❌      | PENDENTE_DICIONARIO  |
 | AP007  | ❌    | ❌      | PENDENTE_DICIONARIO  |

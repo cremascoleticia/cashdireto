@@ -17,8 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
-[tool.setuptools]
-packages = ["cashdireto_worker"]
+[tool.setuptools.packages.find]
+include = ["cashdireto_worker*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
