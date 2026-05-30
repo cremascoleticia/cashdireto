@@ -1,0 +1,72 @@
+# De-para AP013 (legado) → core.ap013_contrato (1 linha = 1 contrato) + core.ap013_ur (coluna 13).
+# Fonte da verdade: docs/fontes/AP013.md (dicionário oficial CERC). O parser (parser.py) é a implementação.
+# ⚠️ Layout FÍSICO assumido = padrão AP005/AP007 (sem amostra real validada — ver suposições na ficha).
+fonte: AP013
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ";"            # ⚠️ suposto (= AP005/AP007)
+decimal: "."
+cabecalho: false          # ⚠️ suposto: SEM cabeçalho; 17 colunas posicionais
+multi_titular: true       # vários contratantes → fonte_arquivo.titular_id NULO
+
+data_referencia:
+  origem: nome_arquivo
+  regex: "(?<!\\d)(\\d{8})(?!\\d)"   # primeiro token de 8 dígitos que seja data válida
+  formato: "%Y%m%d"
+  fallback: data_da_analise
+
+# Colunas posicionais 1..17 → core.ap013_contrato
+contrato:
+  1:  referencia_externa
+  2:  identificador_contrato
+  3:  contratante_doc                 # + resolve titular_id (join core.titular.cnpj, cru)
+  4:  repactuacao                     # 0/1
+  5:  identificador_contrato_anterior # singular (≠ AP007 col.6); obrigatório se repactuacao=1
+  6:  participante_doc
+  7:  detentor_doc
+  8:  tipo_efeito                     # 1/2/3/4/8
+  9:  saldo_devedor
+  10: limite_operacao_garantida
+  11: valor_a_manter
+  12: data_vencimento
+  13: -> core.ap013_ur                # lista quotada de URs alcançadas (ver abaixo)
+  14: indicadores_consistencia_raw    # ⚠️ guardado BRUTO (parse estruturado pendente de amostra)
+  15: qtd_ur_alcancadas
+  16: valor_ur_alcancadas
+  17: resultado_distribuicao_onus     # 0/1/2/3
+
+# Coluna 13: sub-registros separados por '|', cada um com 14 posições (data;valor etc.).
+ur:
+  1:  entidade_registradora_doc
+  2:  credenciadora_doc
+  3:  usuario_final_doc
+  4:  arranjo
+  5:  data_liquidacao
+  6:  titular_ur_doc
+  7:  constituicao                    # 1/2
+  8:  valor_constituido_total
+  9:  valor_bloqueado
+  10: indicador_oneracao              # 0=insucesso; 1..N=PRIORIDADE do ônus (chave p/ Fase 2)
+  11: regra_divisao                   # 1/2
+  12: valor_onerado
+  13: referencia_externa
+  14: valor_constituido_efeito
+
+# Coluna 14 (indicadores de consistência) — NÃO quebrada por ora; guardada bruta.
+# Dicionário: 14.1 Indicador, 14.2 Resultado, 14.3 Parâmetros (attr:valor|attr:valor), 14.4 Criticidade (0/1/2/3).
+
+validacoes:
+  - exatamente 17 colunas por linha; senão erro (não adivinha)
+  - contratante_doc (col3) não vazio
+  - UR com no máximo 14 posições; faltando → NULL
+  - decimais com ponto; vazios → NULL (não 0)
+
+idempotencia:
+  - sha256 do arquivo em core.fonte_arquivo (tipo AP013, titular_id NULO).
+  - reprocessar: delete core.ap013_contrato do fonte_id (cascade → ap013_ur) e regrava.
+  - URs religadas ao contrato por (fonte_id, linha).
+
+observacoes:
+  - "indicador_oneracao (13.10) = ordem de prioridade do ônus no recebimento — guardado cru."
+  - "⚠️ col.14 guardada bruta: 14.3 usa '|'/':' internamente, colidindo com o separador de sub-registros; confirmar com amostra antes de estruturar."
+  - "⚠️ separador, quoting e token de data são SUPOSIÇÕES (= AP005/AP007); confirmar com amostra real."
