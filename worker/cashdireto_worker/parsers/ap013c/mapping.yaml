@@ -1,0 +1,57 @@
+# De-para AP013C → core.ap013c_redistribuicao (1 linha = 1 contrato). Sem listas/sub-registros.
+# Fonte da verdade: docs/fontes/AP013C.md (dicionário oficial CERC). O parser (parser.py) é a implementação.
+# ⚠️ Layout FÍSICO assumido = padrão das demais fontes CERC (sem amostra real validada — ver ficha).
+fonte: AP013C
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ";"            # ⚠️ suposto (= demais fontes CERC)
+decimal: "."
+cabecalho: false          # ⚠️ suposto: SEM cabeçalho; 19 colunas escalares
+multi_titular: true       # vários contratantes → fonte_arquivo.titular_id NULO
+
+data_referencia:
+  origem: nome_arquivo
+  regex: "(?<!\\d)(\\d{8})(?!\\d)"
+  formato: "%Y%m%d"
+  fallback: data_da_analise
+  # obs.: col1 (data_redistribuicao) é a data de negócio autoritativa, guardada à parte.
+
+# Colunas posicionais 1..19 → core.ap013c_redistribuicao
+redistribuicao:
+  1:  data_redistribuicao               # data de referência da redistribuição
+  2:  referencia_externa
+  3:  contratante_doc                    # + resolve titular_id (join core.titular.cnpj, cru)
+  4:  participante_doc
+  5:  carteira
+  6:  valor_minimo_a_manter
+  # antes da redistribuição
+  7:  valor_suficiencia_antes            # = col6 - col10
+  8:  qtd_ur_constituidas_antes          # inteiro
+  9:  qtd_ur_a_constituir_antes          # inteiro (fumaça)
+  10: valor_constituido_efeitos_antes
+  # entrada da redistribuição
+  11: valor_livre_agenda_antes
+  12: qtd_ur_constituidas_solicitadas    # inteiro
+  13: qtd_ur_a_constituir_solicitadas    # inteiro
+  # depois da redistribuição
+  14: valor_suficiencia_depois           # = col6 - col17
+  15: qtd_ur_constituidas_depois         # inteiro
+  16: qtd_ur_a_constituir_depois         # inteiro (fumaça)
+  17: valor_constituido_efeitos_depois
+  # anômalas / observações (opcionais)
+  18: valor_agenda_anomala               # opcional
+  19: observacoes                        # texto livre opcional (quotar se contiver ';')
+
+validacoes:
+  - exatamente 19 colunas por linha; senão erro (não adivinha)
+  - contratante_doc (col3) não vazio
+  - colunas 8,9,12,13,15,16 inteiras; 6,7,10,11,14,17,18 decimais; vazios → NULL (não 0)
+
+idempotencia:
+  - sha256 do arquivo em core.fonte_arquivo (tipo AP013C, titular_id NULO).
+  - reprocessar: delete core.ap013c_redistribuicao do fonte_id e regrava. Sem tabela filha.
+  - linhas religadas por (fonte_id, linha).
+
+observacoes:
+  - "Indicadores antecipados (Fase 2): cobertura/headroom = col14; efeito da redistribuição = col14 - col7."
+  - "⚠️ separador, quoting da col19 e token de data são SUPOSIÇÕES (= demais fontes); confirmar com amostra real."
