@@ -1,0 +1,46 @@
+# De-para AP013A → core.ap013a_resumo (1 linha = 1 Detentor). Agregado, sem titular.
+# Fonte da verdade: docs/fontes/AP013A.md (dicionário oficial CERC). O parser (parser.py) é a implementação.
+# ⚠️ Layout FÍSICO assumido = padrão CERC (sem amostra real validada — ver suposições na ficha).
+fonte: AP013A
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ";"            # ⚠️ suposto (= demais fontes CERC)
+decimal: "."
+cabecalho: false          # ⚠️ suposto: SEM cabeçalho; 10 colunas escalares
+multi_titular: false      # NÃO tem titular; grão = detentor (fonte_arquivo.titular_id NULO)
+
+data_referencia:
+  origem: nome_arquivo
+  regex: "(?<!\\d)(\\d{8})(?!\\d)"   # token de data; a raiz do CNPJ no nome não é data válida
+  formato: "%Y%m%d"
+  fallback: data_da_analise
+
+# Colunas posicionais 1..10 → core.ap013a_resumo
+resumo:
+  1:  detentor_doc                              # CNPJ completo — chave/dimensão (NÃO resolve titular)
+  2:  qtd_contratos                             # inteiro
+  3:  qtd_contratantes                          # inteiro
+  4:  valor_saldo_devedor_total
+  5:  qtd_ur_constituidas                       # inteiro
+  6:  qtd_ur_nao_constituidas                   # inteiro
+  7:  qtd_efeitos                               # inteiro
+  8:  valor_efeitos_solicitados
+  9:  valor_efeitos_calculados_cerc             # esperado a onerar
+  10: valor_efeitos_calculados_credenciadoras   # de fato onerado (~ col9)
+
+validacoes:
+  - exatamente 10 colunas por linha; senão erro (não adivinha)
+  - detentor_doc (col1) não vazio
+  - colunas 2,3,5,6,7 inteiras; 4,8,9,10 decimais; vazios → NULL (não 0)
+
+acesso:
+  - sem titular para ancorar RLS; produto interno → leitura liberada a authenticated (using true).
+
+idempotencia:
+  - sha256 do arquivo em core.fonte_arquivo (tipo AP013A, titular_id NULO).
+  - reprocessar: delete core.ap013a_resumo do fonte_id e regrava (sem tabela titular envolvida).
+  - linhas religadas por (fonte_id, linha).
+
+observacoes:
+  - "Indicador antecipado (Fase 2): aderência da oneração = col10 / col9 (esperado ~ 1,0)."
+  - "⚠️ separador e token de data são SUPOSIÇÕES (= demais fontes); confirmar com amostra real."
