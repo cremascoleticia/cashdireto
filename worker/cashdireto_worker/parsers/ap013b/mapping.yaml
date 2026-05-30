@@ -1,0 +1,65 @@
+# De-para AP013B → core.ap013b_contrato (1 linha = 1 contrato) + core.ap013b_credenciadora (coluna 16).
+# Fonte da verdade: docs/fontes/AP013B.md (dicionário oficial CERC). O parser (parser.py) é a implementação.
+# ⚠️ Layout FÍSICO assumido = padrão AP005/AP007/AP013 (sem amostra real validada — ver suposições na ficha).
+fonte: AP013B
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ";"            # ⚠️ suposto (= demais fontes CERC)
+decimal: "."
+cabecalho: false          # ⚠️ suposto: SEM cabeçalho; 17 colunas posicionais
+multi_titular: true       # vários contratantes → fonte_arquivo.titular_id NULO
+
+data_referencia:
+  origem: nome_arquivo
+  regex: "(?<!\\d)(\\d{8})(?!\\d)"
+  formato: "%Y%m%d"
+  fallback: data_da_analise
+
+# Colunas posicionais 1..17 → core.ap013b_contrato
+contrato:
+  1:  referencia_externa
+  2:  identificador_contrato
+  3:  contratante_doc                 # + resolve titular_id (join core.titular.cnpj, cru)
+  4:  repactuacao                     # 0/1
+  5:  identificador_contrato_anterior # singular
+  6:  participante_doc
+  7:  detentor_doc
+  8:  carteira
+  9:  tipo_servico                    # 1/2/3
+  10: tipo_efeito                     # 1/2/3/4/8
+  11: saldo_devedor
+  12: data_criacao
+  13: data_assinatura
+  14: data_vencimento
+  15: data_ultima_atualizacao
+  16: -> core.ap013b_credenciadora    # lista quotada por credenciadora (ver abaixo)
+  17: indicador_sobrecolateralizacao  # = efeitos(16.6) / saldo devedor(11)
+
+# Coluna 16: sub-registros separados por '|', cada um com 10 posições (todas escalares).
+credenciadora:
+  1:  entidade_registradora_doc
+  2:  credenciadora_doc
+  3:  qtd_ur_constituidas             # inteiro
+  4:  qtd_ur_nao_constituidas         # inteiro
+  5:  qtd_efeitos                     # inteiro
+  6:  valor_efeitos_solicitados
+  7:  valor_efeitos_calculados_cerc
+  8:  valor_efeitos_calculados_credenciadoras
+  9:  qtd_ur_prioridade_1             # inteiro
+  10: qtd_ur_prioridade_diferente_1   # inteiro
+
+validacoes:
+  - exatamente 17 colunas por linha; senão erro (não adivinha)
+  - contratante_doc (col3) não vazio
+  - credenciadora com no máximo 10 posições; faltando → NULL
+  - decimais com ponto, contagens inteiras; vazios → NULL (não 0)
+
+idempotencia:
+  - sha256 do arquivo em core.fonte_arquivo (tipo AP013B, titular_id NULO).
+  - reprocessar: delete core.ap013b_contrato do fonte_id (cascade → ap013b_credenciadora) e regrava.
+  - credenciadoras religadas ao contrato por (fonte_id, linha).
+
+observacoes:
+  - "Indicadores antecipados (Fase 2): sobrecolateralização (col17); aderência 16.8/16.7; prioridade-1 16.9/(16.9+16.10)."
+  - "col16 = sub-campos escalares (sem aninhamento) → encoding seguro, diferente da col14 do AP013 legado."
+  - "⚠️ separador, quoting e token de data são SUPOSIÇÕES (= demais fontes); confirmar com amostra real."
