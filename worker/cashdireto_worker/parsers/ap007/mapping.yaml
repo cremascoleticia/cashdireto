@@ -1,0 +1,61 @@
+# De-para AP007 → core.ap007_contrato (1 linha = 1 contrato) + core.ap007_parcela (coluna 17).
+# Fonte da verdade: docs/fontes/AP007.md (dicionário oficial CERC). O parser (parser.py) é a implementação.
+# ⚠️ Layout FÍSICO assumido = padrão AP005 (sem amostra real validada — ver suposições na ficha).
+fonte: AP007
+formato: csv
+encoding: utf-8            # tolera BOM (utf-8-sig)
+separador: ";"            # ⚠️ suposto (= AP005)
+decimal: "."
+cabecalho: false          # ⚠️ suposto: SEM cabeçalho; 22 colunas posicionais
+multi_titular: true       # vários contratantes → fonte_arquivo.titular_id NULO
+
+data_referencia:
+  origem: nome_arquivo
+  regex: "(?<!\\d)(\\d{8})(?!\\d)"   # primeiro token de 8 dígitos que seja data válida
+  formato: "%Y%m%d"
+  fallback: data_da_analise
+
+# Colunas posicionais 1..22 → core.ap007_contrato
+contrato:
+  1:  tipo_operacao               # C/A/I/B/P/R
+  2:  referencia_externa
+  3:  identificador_contrato
+  4:  contratante_doc             # + resolve titular_id (join core.titular.cnpj, cru)
+  5:  repactuacao                 # 0/1
+  6:  identificadores_contrato_anterior   # ⚠️ lista quotada, itens separados por '|' → text[]
+  7:  participante_doc
+  8:  detentor_doc
+  9:  tipo_efeito                 # 1/2/3/4/8
+  10: saldo_devedor
+  11: limite_operacao_garantida
+  12: valor_a_manter
+  13: data_assinatura
+  14: data_vencimento
+  15: tipo_servico                # 1/2/3
+  16: modalidade_operacao         # 1/2/3
+  17: -> core.ap007_parcela       # ⚠️ lista quotada de parcelas (ver abaixo)
+  18: carteira
+  19: tipo_avaliacao              # enumerador (manual CERC); cru
+  20: taxa_juros                  # % a.a.
+  21: indexador                   # 1..8
+  22: aceite_incondicional        # 1/2
+
+# Coluna 17: sub-registros separados por '|', cada um com 2 posições (data;valor).
+parcela:
+  1:  data_parcela
+  2:  valor_parcela
+
+validacoes:
+  - exatamente 22 colunas por linha; senão erro (não adivinha)
+  - contratante_doc (col4) não vazio
+  - parcela com no máximo 2 posições; faltando → NULL
+  - decimais com ponto; vazios → NULL (não 0)
+
+idempotencia:
+  - sha256 do arquivo em core.fonte_arquivo (tipo AP007, titular_id NULO).
+  - reprocessar: delete core.ap007_contrato do fonte_id (cascade → ap007_parcela) e regrava.
+  - parcelas religadas ao contrato por (fonte_id, linha).
+
+observacoes:
+  - "tipo_operacao/tipo_efeito/tipo_servico/modalidade/indexador/aceite: guardados crus; decodificar é Fase 1b/2."
+  - "⚠️ separador, quoting das listas (col.6 e col.17) e token de data no nome são SUPOSIÇÕES (= AP005); confirmar com amostra real."
