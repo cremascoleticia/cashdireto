@@ -10,19 +10,23 @@ quotadas contêm listas). Confirmar com amostra real — ver suposições na fic
 from __future__ import annotations
 
 import csv
-import hashlib
 import io
-import re
 from dataclasses import dataclass, field
 from datetime import date
 
+from .._cerc import CercParseError, Fields, clean as _s, data_referencia as _data_ref, sha256_hex, to_text
+
 N_COLS = 22
 N_SUB_PARCELA = 2
-_TOKEN_RE = re.compile(r"(?<!\d)(\d{8})(?!\d)")
 
 
-class Ap007ParseError(ValueError):
+class Ap007ParseError(CercParseError):
     """Erro de parsing do AP007 (nº de colunas/sub-campos inesperado, valor inválido)."""
+
+
+_f = Fields(Ap007ParseError)
+_dec = _f.dec
+_date = _f.date
 
 
 @dataclass(frozen=True)
@@ -68,46 +72,6 @@ class Ap007ParseResult:
     total_parcelas: int
 
 
-def _s(v: str | None) -> str | None:
-    if v is None:
-        return None
-    v = v.strip()
-    return v or None
-
-
-def _dec(v: str | None) -> float | None:
-    v = _s(v)
-    if v is None:
-        return None
-    if "," in v and "." not in v:
-        v = v.replace(",", ".")
-    try:
-        return float(v)
-    except ValueError as exc:
-        raise Ap007ParseError(f"valor decimal inválido: {v!r}") from exc
-
-
-def _date(v: str | None) -> date | None:
-    v = _s(v)
-    if v is None:
-        return None
-    try:
-        return date.fromisoformat(v[:10])
-    except ValueError as exc:
-        raise Ap007ParseError(f"data inválida: {v!r}") from exc
-
-
-def _data_ref(filename: str | None, fallback: date) -> date:
-    for tok in _TOKEN_RE.findall(filename or ""):
-        try:
-            y, m, d = int(tok[:4]), int(tok[4:6]), int(tok[6:8])
-            if 2000 <= y <= 2100:
-                return date(y, m, d)
-        except ValueError:
-            pass
-    return fallback
-
-
 def _lista_strings(campo: str | None) -> list:
     """col.6 — itens separados por '|'; vazios descartados."""
     v = _s(campo)
@@ -138,9 +102,8 @@ def _parcelas(campo: str | None) -> list:
 
 
 def parse(content: str | bytes, *, original_filename: str | None, fallback_date: date) -> Ap007ParseResult:
-    raw = content if isinstance(content, bytes) else content.encode("utf-8")
-    sha = hashlib.sha256(raw).hexdigest()
-    text = raw.decode("utf-8-sig", "ignore")
+    raw, text = to_text(content)
+    sha = sha256_hex(raw)
 
     reader = csv.reader(io.StringIO(text), delimiter=";")
     contratos = []

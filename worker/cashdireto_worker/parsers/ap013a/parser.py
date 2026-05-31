@@ -8,18 +8,22 @@ Puro: não toca em banco. Campos vêm do dicionário oficial CERC (docs/fontes/A
 from __future__ import annotations
 
 import csv
-import hashlib
 import io
-import re
 from dataclasses import dataclass
 from datetime import date
 
+from .._cerc import CercParseError, Fields, clean as _s, data_referencia as _data_ref, sha256_hex, to_text
+
 N_COLS = 10
-_TOKEN_RE = re.compile(r"(?<!\d)(\d{8})(?!\d)")
 
 
-class Ap013aParseError(ValueError):
+class Ap013aParseError(CercParseError):
     """Erro de parsing do AP013A (nº de colunas inesperado, valor inválido)."""
+
+
+_f = Fields(Ap013aParseError)
+_dec = _f.dec
+_int = _f.intval
 
 
 @dataclass(frozen=True)
@@ -45,50 +49,9 @@ class Ap013aParseResult:
     detentores: set
 
 
-def _s(v: str | None) -> str | None:
-    if v is None:
-        return None
-    v = v.strip()
-    return v or None
-
-
-def _dec(v: str | None) -> float | None:
-    v = _s(v)
-    if v is None:
-        return None
-    if "," in v and "." not in v:
-        v = v.replace(",", ".")
-    try:
-        return float(v)
-    except ValueError as exc:
-        raise Ap013aParseError(f"valor decimal inválido: {v!r}") from exc
-
-
-def _int(v: str | None) -> int | None:
-    v = _s(v)
-    if v is None:
-        return None
-    try:
-        return int(v) if "." not in v else int(float(v))
-    except ValueError as exc:
-        raise Ap013aParseError(f"valor inteiro inválido: {v!r}") from exc
-
-
-def _data_ref(filename: str | None, fallback: date) -> date:
-    for tok in _TOKEN_RE.findall(filename or ""):
-        try:
-            y, m, d = int(tok[:4]), int(tok[4:6]), int(tok[6:8])
-            if 2000 <= y <= 2100:
-                return date(y, m, d)
-        except ValueError:
-            pass
-    return fallback
-
-
 def parse(content: str | bytes, *, original_filename: str | None, fallback_date: date) -> Ap013aParseResult:
-    raw = content if isinstance(content, bytes) else content.encode("utf-8")
-    sha = hashlib.sha256(raw).hexdigest()
-    text = raw.decode("utf-8-sig", "ignore")
+    raw, text = to_text(content)
+    sha = sha256_hex(raw)
 
     reader = csv.reader(io.StringIO(text), delimiter=";")
     resumos = []
