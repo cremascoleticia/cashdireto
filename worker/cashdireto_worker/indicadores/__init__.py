@@ -1,4 +1,4 @@
-from . import calculos, raiox
+from . import calculos, radar, raiox
 from .calculos import CATALOGO
 
-__all__ = ["calculos", "raiox", "CATALOGO"]
+__all__ = ["calculos", "radar", "raiox", "CATALOGO"]

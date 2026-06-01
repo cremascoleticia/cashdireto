@@ -170,8 +170,14 @@ def prioridade_1_share(credenciadora_rows: Sequence[Mapping]) -> Resultado:
 
 CATALOGO = [
     # nome, status, fonte(s), função (ou None se ainda não calculado)
-    {"nome": "agenda_por_bucket", "status": "disponivel", "fontes": ["RADAR"]},
-    {"nome": "hhi_credenciadora", "status": "disponivel", "fontes": ["RADAR"]},
+    # RADAR — definições da área (ver indicadores/radar.py): totais por situação, nível de
+    # comprometimento (total e por janela), valores por janela e constituído por arranjo (%).
+    {"nome": "radar_recebiveis", "status": "disponivel", "fontes": ["RADAR"],
+     "modulo": "radar.indicadores_radar",
+     "nota": "mesma função por estabelecimento e por raiz (muda só quais linhas entram)"},
+    # extras herdados do SPEC (NÃO estão no spec da área para RADAR) — confirmar manter/remover:
+    {"nome": "agenda_por_bucket", "status": "disponivel_spec_extra", "fontes": ["RADAR"]},
+    {"nome": "hhi_credenciadora", "status": "disponivel_spec_extra", "fontes": ["RADAR"]},
     {"nome": "estoque_total", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
     {"nome": "estoque_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
     {"nome": "pct_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
