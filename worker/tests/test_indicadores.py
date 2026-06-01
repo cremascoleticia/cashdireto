@@ -105,7 +105,7 @@ def test_prioridade_1_share():
 
 def test_catalogo_cobre_status_conhecidos():
     nomes = {x["nome"] for x in CATALOGO}
-    assert {"hhi_bandeira", "onerado_proprio", "tpv_12m", "cobertura_redistribuicao"} <= nomes
+    assert {"hhi_bandeira", "onerado_proprio", "raiox_raiz", "cobertura_redistribuicao"} <= nomes
     # hhi_bandeira explicitamente indisponível (regra 9), com motivo
     bandeira = next(x for x in CATALOGO if x["nome"] == "hhi_bandeira")
     assert bandeira["status"] == "indisponivel" and "arranjo" in bandeira["motivo"]

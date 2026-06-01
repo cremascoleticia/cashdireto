@@ -185,12 +185,15 @@ CATALOGO = [
     {"nome": "sobrecolateralizacao", "status": "disponivel_pendente_validacao", "fontes": ["AP013B"]},
     {"nome": "aderencia_oneracao", "status": "disponivel_pendente_validacao", "fontes": ["AP013A"]},
     {"nome": "prioridade_1_share", "status": "disponivel_pendente_validacao", "fontes": ["AP013B"]},
-    # dependem de série temporal (≥2 snapshots) — Fase 2 fatia futura
-    {"nome": "tpv_12m", "status": "pendente_historico", "fontes": ["RAIOX"]},
-    {"nome": "var_mom", "status": "pendente_historico", "fontes": ["RAIOX"]},
-    {"nome": "var_yoy", "status": "pendente_historico", "fontes": ["RAIOX"]},
-    {"nome": "cagr_12m", "status": "pendente_historico", "fontes": ["RAIOX"]},
-    {"nome": "sazonalidade", "status": "pendente_historico", "fontes": ["RAIOX"]},
+    # RAIOX — definições da área (ver indicadores/raiox.py). Série mensal vem dentro do próprio
+    # arquivo (não depende de múltiplos snapshots).
+    {"nome": "raiox_estabelecimento", "status": "disponivel", "fontes": ["RAIOX"],
+     "modulo": "raiox.por_estabelecimento",
+     "nota": "9 indicadores do dossiê + série mensal + sócios/IP/financiadores, por CNPJ"},
+    {"nome": "raiox_raiz", "status": "disponivel", "fontes": ["RAIOX"],
+     "modulo": "raiox.agregar_por_raiz",
+     "nota": "agregação por raiz de CNPJ; índice de conformidade fica só por estabelecimento"},
+    # depende de série temporal (≥2 snapshots) — fatia futura
     {"nome": "taxa_realizacao", "status": "pendente_historico", "fontes": ["AP005", "RADAR"]},
     # explicitamente desabilitado (regra 9): falta de-para arranjo→bandeira
     {"nome": "hhi_bandeira", "status": "indisponivel", "fontes": ["RADAR"],
