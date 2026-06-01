@@ -11,19 +11,9 @@ de parâmetro/​histórico devolvem `valor=None` com o motivo no detalhe quando
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Iterable, Mapping, Sequence
 
 Resultado = tuple[float | None, dict]
-
-# Mapa janela RADAR → bucket de agenda (SPEC: D+1–30, 31–60, 61–90, 90+).
-_BUCKET = {
-    "0_30": "d1_30",
-    "31_60": "d31_60",
-    "61_90": "d61_90",
-    "91_120": "d90_mais",
-    "120_mais": "d90_mais",
-}
 
 
 def _soma(rows: Iterable[Mapping], campo: str) -> float:
@@ -31,43 +21,9 @@ def _soma(rows: Iterable[Mapping], campo: str) -> float:
     return sum(r[campo] for r in rows if r.get(campo) is not None)
 
 
-def hhi(valores_por_chave: Mapping[str, float]) -> float | None:
-    """Índice Herfindahl-Hirschman normalizado em [0,1] (Σ share²). 1 = concentração total."""
-    total = sum(v for v in valores_por_chave.values() if v)
-    if not total:
-        return None
-    return sum((v / total) ** 2 for v in valores_por_chave.values() if v)
-
-
-# ───────────────────────── Concentração ─────────────────────────
-
-def hhi_credenciadora(agenda_rows: Sequence[Mapping]) -> Resultado:
-    """HHI da concentração de valor por credenciadora (RADAR agenda_ur)."""
-    por_cred: dict[str, float] = defaultdict(float)
-    for r in agenda_rows:
-        if r.get("valor"):
-            por_cred[r.get("credenciadora_doc") or "(sem)"] += r["valor"]
-    valor = hhi(por_cred)
-    return valor, {"por_credenciadora": dict(por_cred), "n_credenciadoras": len(por_cred)}
-
-
-# ───────────────────────── Agenda futura ─────────────────────────
-
-def agenda_por_bucket(agenda_rows: Sequence[Mapping]) -> Resultado:
-    """Distribuição da agenda por bucket de janela, por situação (RADAR).
-
-    Não soma situações entre si (constituido ≠ livre+comprometido na amostra). `valor` headline
-    = total da situação 'constituido'; o detalhe traz {situacao: {bucket: valor}}.
-    """
-    por: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    for r in agenda_rows:
-        bucket = _BUCKET.get(r.get("janela"))
-        if bucket is None or not r.get("valor"):
-            continue
-        por[r.get("situacao") or "(sem)"][bucket] += r["valor"]
-    detalhe = {sit: dict(buckets) for sit, buckets in por.items()}
-    valor = sum(detalhe.get("constituido", {}).values()) or None
-    return valor, {"por_situacao_bucket": detalhe}
+# Concentração/agenda do RADAR ficam em indicadores/radar.py (definição da área: totais por
+# situação/janela e constituído por arranjo com %). HHI por credenciadora e bucketização de
+# agenda foram removidos (não fazem parte do spec da área).
 
 
 # ───────────────────────── Estoque / oneração (AP005) ─────────────────────────
@@ -175,9 +131,6 @@ CATALOGO = [
     {"nome": "radar_recebiveis", "status": "disponivel", "fontes": ["RADAR"],
      "modulo": "radar.indicadores_radar",
      "nota": "mesma função por estabelecimento e por raiz (muda só quais linhas entram)"},
-    # extras herdados do SPEC (NÃO estão no spec da área para RADAR) — confirmar manter/remover:
-    {"nome": "agenda_por_bucket", "status": "disponivel_spec_extra", "fontes": ["RADAR"]},
-    {"nome": "hhi_credenciadora", "status": "disponivel_spec_extra", "fontes": ["RADAR"]},
     {"nome": "estoque_total", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
     {"nome": "estoque_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
     {"nome": "pct_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
@@ -201,7 +154,8 @@ CATALOGO = [
      "nota": "agregação por raiz de CNPJ; índice de conformidade fica só por estabelecimento"},
     # depende de série temporal (≥2 snapshots) — fatia futura
     {"nome": "taxa_realizacao", "status": "pendente_historico", "fontes": ["AP005", "RADAR"]},
-    # explicitamente desabilitado (regra 9): falta de-para arranjo→bandeira
-    {"nome": "hhi_bandeira", "status": "indisponivel", "fontes": ["RADAR"],
+    # explicitamente desabilitado (regra 9): concentração por bandeira (% por bandeira, análogo
+    # ao "% por arranjo") depende do de-para arranjo→bandeira que ainda não temos.
+    {"nome": "concentracao_bandeira", "status": "indisponivel", "fontes": ["RADAR"],
      "motivo": "falta de-para arranjo→bandeira (domínio CERC)"},
 ]

@@ -13,35 +13,7 @@ def _close(a, b):
     return a is not None and math.isclose(a, b, rel_tol=1e-9)
 
 
-# ───────── HHI ─────────
-
-def test_hhi_normalizado():
-    assert _close(c.hhi({"A": 75, "B": 25}), 0.625)        # 0.75² + 0.25²
-    assert c.hhi({}) is None
-    assert c.hhi({"A": 0, "B": 0}) is None
-
-
-def test_hhi_credenciadora():
-    rows = [{"credenciadora_doc": "A", "valor": 60}, {"credenciadora_doc": "A", "valor": 40},
-            {"credenciadora_doc": "B", "valor": 100}]
-    valor, det = c.hhi_credenciadora(rows)
-    assert _close(valor, 0.5)                               # A=100,B=100 → 0.5²+0.5²
-    assert det["por_credenciadora"] == {"A": 100, "B": 100} and det["n_credenciadoras"] == 2
-
-
-# ───────── Agenda por bucket ─────────
-
-def test_agenda_por_bucket_nao_soma_situacoes():
-    rows = [
-        {"situacao": "constituido", "janela": "0_30", "valor": 100},
-        {"situacao": "constituido", "janela": "120_mais", "valor": 50},
-        {"situacao": "constituido", "janela": "91_120", "valor": 30},
-        {"situacao": "livre", "janela": "0_30", "valor": 999},
-    ]
-    valor, det = c.agenda_por_bucket(rows)
-    assert _close(valor, 180)                               # só 'constituido': 100+50+30
-    assert det["por_situacao_bucket"]["constituido"] == {"d1_30": 100, "d90_mais": 80}
-    assert det["por_situacao_bucket"]["livre"] == {"d1_30": 999}   # não entra no headline
+# (RADAR — totais por situação/janela/arranjo — fica em test_radar_indicadores.py)
 
 
 # ───────── Estoque / oneração (AP005) ─────────
@@ -105,9 +77,12 @@ def test_prioridade_1_share():
 
 def test_catalogo_cobre_status_conhecidos():
     nomes = {x["nome"] for x in CATALOGO}
-    assert {"hhi_bandeira", "onerado_proprio", "raiox_raiz", "cobertura_redistribuicao"} <= nomes
-    # hhi_bandeira explicitamente indisponível (regra 9), com motivo
-    bandeira = next(x for x in CATALOGO if x["nome"] == "hhi_bandeira")
+    assert {"concentracao_bandeira", "onerado_proprio", "raiox_raiz", "radar_recebiveis",
+            "cobertura_redistribuicao"} <= nomes
+    # concentracao_bandeira explicitamente indisponível (regra 9), com motivo
+    bandeira = next(x for x in CATALOGO if x["nome"] == "concentracao_bandeira")
     assert bandeira["status"] == "indisponivel" and "arranjo" in bandeira["motivo"]
+    # garante que os extras especulativos foram removidos
+    assert {"hhi_credenciadora", "agenda_por_bucket", "hhi_bandeira"}.isdisjoint(nomes)
     # indicadores com parâmetro declaram qual
     assert all("parametro" in x for x in CATALOGO if x["status"] == "disponivel_com_parametro")
