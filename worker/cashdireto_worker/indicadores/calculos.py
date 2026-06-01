@@ -26,28 +26,9 @@ def _soma(rows: Iterable[Mapping], campo: str) -> float:
 # agenda foram removidos (não fazem parte do spec da área).
 
 
-# ───────────────────────── Estoque / oneração (AP005) ─────────────────────────
-
-def estoque_total(ur_rows: Sequence[Mapping]) -> Resultado:
-    """Σ valor constituído total das URs (AP005 ap005_ur)."""
-    total = _soma(ur_rows, "valor_constituido_total")
-    return (total or None), {"n_urs": len(ur_rows)}
-
-
-def estoque_onerado(pagamento_rows: Sequence[Mapping]) -> Resultado:
-    """Σ valor onerado nos efeitos (AP005 ap005_pagamento)."""
-    onerado = _soma(pagamento_rows, "valor_onerado")
-    return (onerado or None), {"n_efeitos": len(pagamento_rows)}
-
-
-def pct_onerado(ur_rows: Sequence[Mapping], pagamento_rows: Sequence[Mapping]) -> Resultado:
-    """estoque_onerado / estoque_total."""
-    total = _soma(ur_rows, "valor_constituido_total")
-    onerado = _soma(pagamento_rows, "valor_onerado")
-    if not total:
-        return None, {"motivo": "estoque_total = 0"}
-    return onerado / total, {"onerado": onerado, "total": total}
-
+# ───────────────────────── Oneração própria × terceiros (AP005) ─────────────────────────
+# Métrica de risco (base do gatilho de erosão da Fase 3). As somas agrupadas de AP005 (estoque,
+# onerado por ordem/tipo/beneficiário) ficam em indicadores/ap005.py, conforme spec da área.
 
 def onerado_proprio(pagamento_rows: Sequence[Mapping], detentor_proprio: Sequence[str] | None) -> Resultado:
     """Σ onerado cujo beneficiário é a cashdireto. Sem o parâmetro → indisponível (não estima)."""
@@ -151,12 +132,7 @@ CATALOGO = [
      "modulo": "ap005.constituido_efeito_por_ordem_e_beneficiario"},
     {"nome": "ap005_efeito_por_beneficiario", "status": "disponivel", "fontes": ["AP005"],
      "modulo": "ap005.constituido_efeito_por_beneficiario"},
-    # extras: estoque/pct vêm do SPEC, não do spec da área p/ AP005 — confirmar manter/remover.
-    {"nome": "estoque_total", "status": "disponivel_spec_extra", "fontes": ["AP005"]},
-    {"nome": "estoque_onerado", "status": "disponivel_spec_extra", "fontes": ["AP005"]},
-    {"nome": "pct_onerado", "status": "disponivel_spec_extra", "fontes": ["AP005"]},
-    # próprio×terceiros: pedido antes (parâmetro detentor_proprio). A área agora dá a quebra por
-    # beneficiário (ap005_efeito_por_beneficiario) — confirmar se ainda quer o recorte próprio×terceiros.
+    # próprio×terceiros: métrica de risco (base do gatilho de erosão da Fase 3); usa detentor_proprio.
     {"nome": "onerado_proprio", "status": "disponivel_com_parametro", "fontes": ["AP005"],
      "parametro": "detentor_proprio"},
     {"nome": "onerado_terceiros", "status": "disponivel_com_parametro", "fontes": ["AP005"],

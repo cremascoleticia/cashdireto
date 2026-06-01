@@ -16,15 +16,8 @@ def _close(a, b):
 # (RADAR — totais por situação/janela/arranjo — fica em test_radar_indicadores.py)
 
 
-# ───────── Estoque / oneração (AP005) ─────────
-
-def test_estoque_e_pct_onerado():
-    urs = [{"valor_constituido_total": 500}, {"valor_constituido_total": 300}]
-    pags = [{"valor_onerado": 500}, {"valor_onerado": 200}]
-    assert _close(c.estoque_total(urs)[0], 800)
-    assert _close(c.estoque_onerado(pags)[0], 700)
-    assert _close(c.pct_onerado(urs, pags)[0], 0.875)       # 700/800
-
+# ───────── Oneração própria × terceiros (AP005) — métrica de risco ─────────
+# (somas agrupadas de AP005 ficam em test_ap005_indicadores.py)
 
 def test_onerado_proprio_e_terceiros():
     pags = [{"valor_onerado": 500, "beneficiario_doc": "X"},
