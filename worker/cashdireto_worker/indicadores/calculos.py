@@ -11,19 +11,9 @@ de parâmetro/​histórico devolvem `valor=None` com o motivo no detalhe quando
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Iterable, Mapping, Sequence
 
 Resultado = tuple[float | None, dict]
-
-# Mapa janela RADAR → bucket de agenda (SPEC: D+1–30, 31–60, 61–90, 90+).
-_BUCKET = {
-    "0_30": "d1_30",
-    "31_60": "d31_60",
-    "61_90": "d61_90",
-    "91_120": "d90_mais",
-    "120_mais": "d90_mais",
-}
 
 
 def _soma(rows: Iterable[Mapping], campo: str) -> float:
@@ -31,67 +21,14 @@ def _soma(rows: Iterable[Mapping], campo: str) -> float:
     return sum(r[campo] for r in rows if r.get(campo) is not None)
 
 
-def hhi(valores_por_chave: Mapping[str, float]) -> float | None:
-    """Índice Herfindahl-Hirschman normalizado em [0,1] (Σ share²). 1 = concentração total."""
-    total = sum(v for v in valores_por_chave.values() if v)
-    if not total:
-        return None
-    return sum((v / total) ** 2 for v in valores_por_chave.values() if v)
+# Concentração/agenda do RADAR ficam em indicadores/radar.py (definição da área: totais por
+# situação/janela e constituído por arranjo com %). HHI por credenciadora e bucketização de
+# agenda foram removidos (não fazem parte do spec da área).
 
 
-# ───────────────────────── Concentração ─────────────────────────
-
-def hhi_credenciadora(agenda_rows: Sequence[Mapping]) -> Resultado:
-    """HHI da concentração de valor por credenciadora (RADAR agenda_ur)."""
-    por_cred: dict[str, float] = defaultdict(float)
-    for r in agenda_rows:
-        if r.get("valor"):
-            por_cred[r.get("credenciadora_doc") or "(sem)"] += r["valor"]
-    valor = hhi(por_cred)
-    return valor, {"por_credenciadora": dict(por_cred), "n_credenciadoras": len(por_cred)}
-
-
-# ───────────────────────── Agenda futura ─────────────────────────
-
-def agenda_por_bucket(agenda_rows: Sequence[Mapping]) -> Resultado:
-    """Distribuição da agenda por bucket de janela, por situação (RADAR).
-
-    Não soma situações entre si (constituido ≠ livre+comprometido na amostra). `valor` headline
-    = total da situação 'constituido'; o detalhe traz {situacao: {bucket: valor}}.
-    """
-    por: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    for r in agenda_rows:
-        bucket = _BUCKET.get(r.get("janela"))
-        if bucket is None or not r.get("valor"):
-            continue
-        por[r.get("situacao") or "(sem)"][bucket] += r["valor"]
-    detalhe = {sit: dict(buckets) for sit, buckets in por.items()}
-    valor = sum(detalhe.get("constituido", {}).values()) or None
-    return valor, {"por_situacao_bucket": detalhe}
-
-
-# ───────────────────────── Estoque / oneração (AP005) ─────────────────────────
-
-def estoque_total(ur_rows: Sequence[Mapping]) -> Resultado:
-    """Σ valor constituído total das URs (AP005 ap005_ur)."""
-    total = _soma(ur_rows, "valor_constituido_total")
-    return (total or None), {"n_urs": len(ur_rows)}
-
-
-def estoque_onerado(pagamento_rows: Sequence[Mapping]) -> Resultado:
-    """Σ valor onerado nos efeitos (AP005 ap005_pagamento)."""
-    onerado = _soma(pagamento_rows, "valor_onerado")
-    return (onerado or None), {"n_efeitos": len(pagamento_rows)}
-
-
-def pct_onerado(ur_rows: Sequence[Mapping], pagamento_rows: Sequence[Mapping]) -> Resultado:
-    """estoque_onerado / estoque_total."""
-    total = _soma(ur_rows, "valor_constituido_total")
-    onerado = _soma(pagamento_rows, "valor_onerado")
-    if not total:
-        return None, {"motivo": "estoque_total = 0"}
-    return onerado / total, {"onerado": onerado, "total": total}
-
+# ───────────────────────── Oneração própria × terceiros (AP005) ─────────────────────────
+# Métrica de risco (base do gatilho de erosão da Fase 3). As somas agrupadas de AP005 (estoque,
+# onerado por ordem/tipo/beneficiário) ficam em indicadores/ap005.py, conforme spec da área.
 
 def onerado_proprio(pagamento_rows: Sequence[Mapping], detentor_proprio: Sequence[str] | None) -> Resultado:
     """Σ onerado cujo beneficiário é a cashdireto. Sem o parâmetro → indisponível (não estima)."""
@@ -112,79 +49,66 @@ def onerado_terceiros(pagamento_rows: Sequence[Mapping], detentor_proprio: Seque
     return total - (proprio or 0.0), {"onerado_total": total, "onerado_proprio": proprio}
 
 
-# ───────────────────────── Cobertura / headroom (AP013C) ─────────────────────────
-
-def cobertura_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Cobertura pós-redistribuição = Σ constituído depois / Σ valor mínimo a manter (AP013C)."""
-    total_min = _soma(redistribuicao_rows, "valor_minimo_a_manter")
-    total_const = _soma(redistribuicao_rows, "valor_constituido_efeitos_depois")
-    if not total_min:
-        return None, {"motivo": "Σ valor_minimo_a_manter = 0"}
-    return total_const / total_min, {"constituido_depois": total_const, "minimo": total_min}
-
-
-def headroom_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Headroom pós-redistribuição = Σ valor_suficiencia_depois (AP013C col.14; <0 déficit)."""
-    suf = _soma(redistribuicao_rows, "valor_suficiencia_depois")
-    return suf, {"n_contratos": len(redistribuicao_rows)}
-
-
-def efeito_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Σ (suficiência depois − suficiência antes) — quanto a redistribuição melhorou a cobertura."""
-    depois = _soma(redistribuicao_rows, "valor_suficiencia_depois")
-    antes = _soma(redistribuicao_rows, "valor_suficiencia_antes")
-    return depois - antes, {"antes": antes, "depois": depois}
-
-
-# ───────────────────────── Sobrecolateralização / aderência / prioridade ─────────────────────────
-
-def sobrecolateralizacao(contrato_rows: Sequence[Mapping]) -> Resultado:
-    """Sobrecolateralização do titular = média ponderada por saldo do indicador (AP013B col.17)."""
-    num = sum((r["indicador_sobrecolateralizacao"] or 0) * (r.get("saldo_devedor") or 0)
-              for r in contrato_rows if r.get("indicador_sobrecolateralizacao") is not None)
-    saldo = _soma(contrato_rows, "saldo_devedor")
-    if not saldo:
-        return None, {"motivo": "Σ saldo_devedor = 0"}
-    return num / saldo, {"saldo_total": saldo}
-
-
-def aderencia_oneracao(resumo_rows: Sequence[Mapping]) -> Resultado:
-    """Aderência = Σ calculado credenciadoras / Σ calculado CERC (AP013A; esperado ≈ 1)."""
-    cerc = _soma(resumo_rows, "valor_efeitos_calculados_cerc")
-    cred = _soma(resumo_rows, "valor_efeitos_calculados_credenciadoras")
-    if not cerc:
-        return None, {"motivo": "Σ calculado CERC = 0"}
-    return cred / cerc, {"calculado_cerc": cerc, "calculado_credenciadoras": cred}
-
-
-def prioridade_1_share(credenciadora_rows: Sequence[Mapping]) -> Resultado:
-    """Fração de URs em 1ª prioridade = Σ p1 / Σ(p1 + p≠1) (AP013B credenciadora)."""
-    p1 = _soma(credenciadora_rows, "qtd_ur_prioridade_1")
-    pd = _soma(credenciadora_rows, "qtd_ur_prioridade_diferente_1")
-    if not (p1 + pd):
-        return None, {"motivo": "sem URs alcançadas"}
-    return p1 / (p1 + pd), {"prioridade_1": p1, "prioridade_diferente_1": pd}
-
-
 # ───────────────────────── Catálogo (status por indicador — ver docs/reconciliacao.md) ─────────────────────────
 
 CATALOGO = [
     # nome, status, fonte(s), função (ou None se ainda não calculado)
-    {"nome": "agenda_por_bucket", "status": "disponivel", "fontes": ["RADAR"]},
-    {"nome": "hhi_credenciadora", "status": "disponivel", "fontes": ["RADAR"]},
-    {"nome": "estoque_total", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
-    {"nome": "estoque_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
-    {"nome": "pct_onerado", "status": "disponivel_pendente_validacao", "fontes": ["AP005"]},
+    # RADAR — definições da área (ver indicadores/radar.py): totais por situação, nível de
+    # comprometimento (total e por janela), valores por janela e constituído por arranjo (%).
+    {"nome": "radar_recebiveis", "status": "disponivel", "fontes": ["RADAR"],
+     "modulo": "radar.indicadores_radar",
+     "nota": "mesma função por estabelecimento e por raiz (muda só quais linhas entram)"},
+    # AP005 — definições da área (ver indicadores/ap005.py). AP005 tem amostra real → disponível.
+    # Mesma função por estabelecimento e por raiz (muda só quais linhas entram).
+    {"nome": "ap005_constituido_por_usuario_final", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.constituido_por_usuario_final"},
+    {"nome": "ap005_constituido_por_titular_ur", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.constituido_por_titular_ur"},
+    {"nome": "ap005_livre_por_usuario_final", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.livre_por_usuario_final"},
+    {"nome": "ap005_total_ur_por_usuario_final", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.total_ur_por_usuario_final"},
+    {"nome": "ap005_efeito_por_ordem", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.constituido_efeito_por_ordem"},
+    {"nome": "ap005_onerado_por_ordem_regra", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.onerado_por_ordem_e_regra"},
+    {"nome": "ap005_onerado_por_tipo_regra", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.onerado_por_tipo_info_e_regra"},
+    {"nome": "ap005_efeito_por_ordem_beneficiario", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.constituido_efeito_por_ordem_e_beneficiario"},
+    {"nome": "ap005_efeito_por_beneficiario", "status": "disponivel", "fontes": ["AP005"],
+     "modulo": "ap005.constituido_efeito_por_beneficiario"},
+    # próprio×terceiros: métrica de risco (base do gatilho de erosão da Fase 3); usa detentor_proprio.
     {"nome": "onerado_proprio", "status": "disponivel_com_parametro", "fontes": ["AP005"],
      "parametro": "detentor_proprio"},
     {"nome": "onerado_terceiros", "status": "disponivel_com_parametro", "fontes": ["AP005"],
      "parametro": "detentor_proprio"},
-    {"nome": "cobertura_redistribuicao", "status": "disponivel_pendente_validacao", "fontes": ["AP013C"]},
-    {"nome": "headroom_redistribuicao", "status": "disponivel_pendente_validacao", "fontes": ["AP013C"]},
-    {"nome": "efeito_redistribuicao", "status": "disponivel_pendente_validacao", "fontes": ["AP013C"]},
-    {"nome": "sobrecolateralizacao", "status": "disponivel_pendente_validacao", "fontes": ["AP013B"]},
-    {"nome": "aderencia_oneracao", "status": "disponivel_pendente_validacao", "fontes": ["AP013A"]},
-    {"nome": "prioridade_1_share", "status": "disponivel_pendente_validacao", "fontes": ["AP013B"]},
+    # AP013 (legado) — definições da área (ver indicadores/ap013.py). Sem amostra real → pendente.
+    {"nome": "ap013_constituido_por_usuario_final", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.constituido_por_usuario_final"},
+    {"nome": "ap013_constituido_por_uf_oneracao", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.constituido_por_usuario_final_e_oneracao"},
+    {"nome": "ap013_onerado_por_usuario_final", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.onerado_por_usuario_final"},
+    {"nome": "ap013_onerado_por_uf_oneracao", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.onerado_por_usuario_final_e_oneracao"},
+    {"nome": "ap013_onerado_por_uf_mes_oneracao", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.onerado_por_usuario_final_data_oneracao"},
+    {"nome": "ap013_constituido_por_uf_mes_oneracao", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013"], "modulo": "ap013.constituido_por_usuario_final_data_oneracao"},
+    {"nome": "ap013_valor_a_manter_proprio", "status": "disponivel_com_parametro",
+     "fontes": ["AP013"], "parametro": "detentor_proprio",
+     "modulo": "ap013.valor_a_manter_proprio_por_contratante_efeito"},
+    # AP013B — definição da área (ver indicadores/ap013b.py)
+    {"nome": "ap013b_calculado_credenciadoras_proprio", "status": "disponivel_com_parametro",
+     "fontes": ["AP013B"], "parametro": "detentor_proprio",
+     "modulo": "ap013b.calculado_credenciadoras_proprio_por_contratante_efeito"},
+    # AP013C — definição da área (ver indicadores/ap013c.py)
+    {"nome": "ap013c_total_constituido_efeitos_depois", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013C"], "modulo": "ap013c.total_constituido_efeitos_depois"},
+    {"nome": "ap013c_total_suficiencia_depois", "status": "disponivel_pendente_validacao",
+     "fontes": ["AP013C"], "modulo": "ap013c.total_suficiencia_depois"},
+    # (AP013A e AP007: a área pediu para não calcular indicadores agora.)
     # RAIOX — definições da área (ver indicadores/raiox.py). Série mensal vem dentro do próprio
     # arquivo (não depende de múltiplos snapshots).
     {"nome": "raiox_estabelecimento", "status": "disponivel", "fontes": ["RAIOX"],
@@ -195,7 +119,8 @@ CATALOGO = [
      "nota": "agregação por raiz de CNPJ; índice de conformidade fica só por estabelecimento"},
     # depende de série temporal (≥2 snapshots) — fatia futura
     {"nome": "taxa_realizacao", "status": "pendente_historico", "fontes": ["AP005", "RADAR"]},
-    # explicitamente desabilitado (regra 9): falta de-para arranjo→bandeira
-    {"nome": "hhi_bandeira", "status": "indisponivel", "fontes": ["RADAR"],
+    # explicitamente desabilitado (regra 9): concentração por bandeira (% por bandeira, análogo
+    # ao "% por arranjo") depende do de-para arranjo→bandeira que ainda não temos.
+    {"nome": "concentracao_bandeira", "status": "indisponivel", "fontes": ["RADAR"],
      "motivo": "falta de-para arranjo→bandeira (domínio CERC)"},
 ]
