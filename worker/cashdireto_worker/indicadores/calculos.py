@@ -49,60 +49,6 @@ def onerado_terceiros(pagamento_rows: Sequence[Mapping], detentor_proprio: Seque
     return total - (proprio or 0.0), {"onerado_total": total, "onerado_proprio": proprio}
 
 
-# ───────────────────────── Cobertura / headroom (AP013C) ─────────────────────────
-
-def cobertura_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Cobertura pós-redistribuição = Σ constituído depois / Σ valor mínimo a manter (AP013C)."""
-    total_min = _soma(redistribuicao_rows, "valor_minimo_a_manter")
-    total_const = _soma(redistribuicao_rows, "valor_constituido_efeitos_depois")
-    if not total_min:
-        return None, {"motivo": "Σ valor_minimo_a_manter = 0"}
-    return total_const / total_min, {"constituido_depois": total_const, "minimo": total_min}
-
-
-def headroom_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Headroom pós-redistribuição = Σ valor_suficiencia_depois (AP013C col.14; <0 déficit)."""
-    suf = _soma(redistribuicao_rows, "valor_suficiencia_depois")
-    return suf, {"n_contratos": len(redistribuicao_rows)}
-
-
-def efeito_redistribuicao(redistribuicao_rows: Sequence[Mapping]) -> Resultado:
-    """Σ (suficiência depois − suficiência antes) — quanto a redistribuição melhorou a cobertura."""
-    depois = _soma(redistribuicao_rows, "valor_suficiencia_depois")
-    antes = _soma(redistribuicao_rows, "valor_suficiencia_antes")
-    return depois - antes, {"antes": antes, "depois": depois}
-
-
-# ───────────────────────── Sobrecolateralização / aderência / prioridade ─────────────────────────
-
-def sobrecolateralizacao(contrato_rows: Sequence[Mapping]) -> Resultado:
-    """Sobrecolateralização do titular = média ponderada por saldo do indicador (AP013B col.17)."""
-    num = sum((r["indicador_sobrecolateralizacao"] or 0) * (r.get("saldo_devedor") or 0)
-              for r in contrato_rows if r.get("indicador_sobrecolateralizacao") is not None)
-    saldo = _soma(contrato_rows, "saldo_devedor")
-    if not saldo:
-        return None, {"motivo": "Σ saldo_devedor = 0"}
-    return num / saldo, {"saldo_total": saldo}
-
-
-def aderencia_oneracao(resumo_rows: Sequence[Mapping]) -> Resultado:
-    """Aderência = Σ calculado credenciadoras / Σ calculado CERC (AP013A; esperado ≈ 1)."""
-    cerc = _soma(resumo_rows, "valor_efeitos_calculados_cerc")
-    cred = _soma(resumo_rows, "valor_efeitos_calculados_credenciadoras")
-    if not cerc:
-        return None, {"motivo": "Σ calculado CERC = 0"}
-    return cred / cerc, {"calculado_cerc": cerc, "calculado_credenciadoras": cred}
-
-
-def prioridade_1_share(credenciadora_rows: Sequence[Mapping]) -> Resultado:
-    """Fração de URs em 1ª prioridade = Σ p1 / Σ(p1 + p≠1) (AP013B credenciadora)."""
-    p1 = _soma(credenciadora_rows, "qtd_ur_prioridade_1")
-    pd = _soma(credenciadora_rows, "qtd_ur_prioridade_diferente_1")
-    if not (p1 + pd):
-        return None, {"motivo": "sem URs alcançadas"}
-    return p1 / (p1 + pd), {"prioridade_1": p1, "prioridade_diferente_1": pd}
-
-
 # ───────────────────────── Catálogo (status por indicador — ver docs/reconciliacao.md) ─────────────────────────
 
 CATALOGO = [
@@ -162,14 +108,7 @@ CATALOGO = [
      "fontes": ["AP013C"], "modulo": "ap013c.total_constituido_efeitos_depois"},
     {"nome": "ap013c_total_suficiencia_depois", "status": "disponivel_pendente_validacao",
      "fontes": ["AP013C"], "modulo": "ap013c.total_suficiencia_depois"},
-    # extras herdados do SPEC (NÃO estão nas definições da área) — confirmar manter/remover.
-    # (AP013A/AP007 a área disse para não calcular agora.)
-    {"nome": "cobertura_redistribuicao", "status": "disponivel_spec_extra", "fontes": ["AP013C"]},
-    {"nome": "headroom_redistribuicao", "status": "disponivel_spec_extra", "fontes": ["AP013C"]},
-    {"nome": "efeito_redistribuicao", "status": "disponivel_spec_extra", "fontes": ["AP013C"]},
-    {"nome": "sobrecolateralizacao", "status": "disponivel_spec_extra", "fontes": ["AP013B"]},
-    {"nome": "aderencia_oneracao", "status": "disponivel_spec_extra", "fontes": ["AP013A"]},
-    {"nome": "prioridade_1_share", "status": "disponivel_spec_extra", "fontes": ["AP013B"]},
+    # (AP013A e AP007: a área pediu para não calcular indicadores agora.)
     # RAIOX — definições da área (ver indicadores/raiox.py). Série mensal vem dentro do próprio
     # arquivo (não depende de múltiplos snapshots).
     {"nome": "raiox_estabelecimento", "status": "disponivel", "fontes": ["RAIOX"],
