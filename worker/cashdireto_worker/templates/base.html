@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cockpit de Recebíveis — v0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <header class="bg-slate-900 text-white">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
+      <span class="font-semibold">Cockpit de Recebíveis</span>
+      <nav class="flex gap-4 text-sm">
+        <a class="hover:underline" href="/">Upload</a>
+        <a class="hover:underline" href="/indicadores">Indicadores</a>
+      </nav>
+      <span class="ml-auto text-xs text-slate-400">v0</span>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto p-6">
+    {% block conteudo %}{% endblock %}
+  </main>
+</body>
+</html>

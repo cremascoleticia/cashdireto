@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h1 class="text-2xl font-semibold mb-4">Indicadores</h1>
+
+<form method="get" action="/indicadores" class="bg-white rounded-xl shadow p-4 mb-6 flex flex-wrap items-end gap-4">
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Escopo</label>
+    <select name="escopo" class="border border-slate-300 rounded-lg p-2 text-sm">
+      <option value="loja" {% if escopo=='loja' %}selected{% endif %}>Estabelecimento (loja)</option>
+      <option value="grupo" {% if escopo=='grupo' %}selected{% endif %}>Grupo (raiz de CNPJ)</option>
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Selecionar</label>
+    <select name="chave" class="border border-slate-300 rounded-lg p-2 text-sm min-w-[20rem]">
+      <option value="">—</option>
+      {% for item in (lojas if escopo=='loja' else grupos) %}
+        <option value="{{ item.chave }}" {% if item.chave==chave %}selected{% endif %}>{{ item.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="bg-slate-900 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-700">Ver</button>
+</form>
+
+{% if not chave %}
+  <p class="text-slate-600">Escolha um estabelecimento ou grupo para ver os indicadores.</p>
+{% elif not blocos %}
+  <p class="text-slate-600">Sem indicadores para <b>{{ chave }}</b> ainda. Faça o upload dos arquivos.</p>
+{% else %}
+
+  {# ── Labels ── #}
+  {% for b in blocos if b.tipo == 'labels' %}
+    <h3 class="text-sm font-semibold text-slate-500 mt-6 mb-2">{{ b.titulo }}</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {% for it in b.itens %}
+        <div class="bg-white rounded-xl shadow p-4">
+          <div class="text-xs text-slate-500">{{ it.rotulo }}</div>
+          <div class="text-lg font-semibold">
+            {% if it.valor is none %}—
+            {% elif it.pct %}{{ (it.valor * 100) | round(1) }}%
+            {% else %}{{ it.valor | num }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  {# ── Gráficos ── #}
+  {% set graficos = blocos | selectattr('tipo','equalto','grafico') | list %}
+  {% if graficos %}
+    <h3 class="text-sm font-semibold text-slate-500 mt-8 mb-2">Gráficos</h3>
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for g in graficos %}
+        <div class="bg-white rounded-xl shadow p-4">
+          <div class="text-sm font-medium mb-2">{{ g.titulo }}</div>
+          <canvas id="graf-{{ loop.index0 }}" height="180"></canvas>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# ── Tabelas ── #}
+  {% for b in blocos if b.tipo == 'tabela' %}
+    <h3 class="text-sm font-semibold text-slate-500 mt-8 mb-2">{{ b.titulo }}</h3>
+    <table class="w-full text-sm bg-white rounded-xl shadow overflow-hidden mb-2">
+      <thead class="bg-slate-100 text-left"><tr>
+        {% for c in b.colunas %}<th class="p-2">{{ c }}</th>{% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for linha in b.linhas %}
+          <tr class="border-t">{% for cel in linha %}<td class="p-2">{{ cel if cel is not none else '—' }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endfor %}
+
+  <script>
+    const GRAFICOS = {{ graficos | tojson }};
+    GRAFICOS.forEach((g, i) => {
+      const el = document.getElementById('graf-' + i);
+      if (!el) return;
+      new Chart(el, {
+        type: g.subtipo || 'bar',
+        data: { labels: g.labels,
+                datasets: (g.datasets || []).map(d => ({ label: d.label, data: d.dados })) },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    });
+  </script>
+{% endif %}
+{% endblock %}

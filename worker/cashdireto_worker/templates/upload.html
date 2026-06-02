@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h1 class="text-2xl font-semibold mb-2">Upload de arquivos CERC</h1>
+<p class="text-slate-600 mb-6">Suba os arquivos (RADAR, RAIOX, AP005, AP007, AP013, AP013A/B/C).
+O sistema detecta a fonte, carrega no banco e calcula os indicadores.</p>
+
+<form action="/processar" method="post" enctype="multipart/form-data"
+      class="bg-white rounded-xl shadow p-6 flex flex-col gap-4 max-w-xl">
+  <input type="file" name="arquivos" multiple required
+         class="block w-full text-sm border border-slate-300 rounded-lg p-2">
+  <button class="bg-slate-900 text-white rounded-lg px-4 py-2 w-fit hover:bg-slate-700">
+    Processar
+  </button>
+</form>
+
+<form action="/recalcular" method="post" class="mt-3 max-w-xl">
+  <button class="text-sm text-slate-600 underline hover:text-slate-900">
+    Recalcular indicadores (a partir dos dados já carregados)
+  </button>
+</form>
+
+{% if resultados is defined %}
+  <div class="mt-8">
+    <h2 class="text-lg font-semibold mb-3">Resultado do processamento</h2>
+    {% if n_indicadores is not none %}
+      <p class="mb-3 text-emerald-700">✓ {{ resultados|length }} arquivo(s) processado(s);
+         {{ n_indicadores }} indicadores recalculados.
+         <a class="underline" href="/indicadores">Ver indicadores →</a></p>
+    {% endif %}
+    {% if resultados %}
+    <table class="w-full text-sm bg-white rounded-xl shadow overflow-hidden">
+      <thead class="bg-slate-100 text-left"><tr>
+        <th class="p-2">Arquivo</th><th class="p-2">Fonte</th><th class="p-2">Data ref.</th>
+      </tr></thead>
+      <tbody>
+        {% for r in resultados %}
+        <tr class="border-t"><td class="p-2">{{ r.nome_arquivo }}</td>
+            <td class="p-2 font-medium">{{ r.tipo }}</td>
+            <td class="p-2">{{ r.data_referencia }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% for e in erros %}
+      <p class="mt-2 text-red-700 text-sm">✗ {{ e.arquivo }}: {{ e.erro }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
