@@ -49,8 +49,12 @@ export interface ResultadoUR {
   aPagarPorBeneficiario: Map<string, number>;
 }
 
-/** Status de um efeito de um beneficiário numa UR (rótulos da seção 9 / Bloco C). */
-export type StatusEfeito = "Integral" | "Parcial" | "Subordinado" | "Sem saldo informado";
+/** Status de um efeito de um beneficiário numa UR (rótulos da seção 9 / Bloco C).
+ *  "Subordinado" = havia saldo mas os seniores consumiram antes de mim.
+ *  "Sem saldo"   = a UR foi reportada com valor_ur = 0 (a constituir / já liquidada) — não é
+ *                  subordinação, simplesmente não há o que distribuir.
+ *  "Sem saldo informado" = valor_ur ausente (NULL): fora dos totais, não estimado. */
+export type StatusEfeito = "Integral" | "Parcial" | "Subordinado" | "Sem saldo" | "Sem saldo informado";
 
 const EPS = 1e-6;
 
@@ -146,11 +150,18 @@ export function constituidoBeneficiario(ur: UR, beneficiario: string): number {
     .reduce((s, e) => s + Math.max(0, e.valor_constituido), 0);
 }
 
-/** Classifica o efeito do beneficiário na UR (rótulos do Bloco C). */
-export function classificar(constituido: number, aPagar: number | null): StatusEfeito {
-  if (aPagar === null) return "Sem saldo informado";
+/** Classifica o efeito do beneficiário na UR (rótulos do Bloco C).
+ *  `valorUr` (opcional) distingue UR zerada (Sem saldo) de subordinação real. */
+export function classificar(
+  constituido: number,
+  aPagar: number | null,
+  valorUr?: number | null,
+): StatusEfeito {
+  if (aPagar === null) return "Sem saldo informado"; // valor_ur NULL
+  if (valorUr !== undefined && valorUr !== null && valorUr <= EPS && constituido > EPS)
+    return "Sem saldo"; // UR reportada zerada (a constituir) — não é subordinação
   if (constituido <= EPS) return "Subordinado"; // nada constituído ⇒ nada a receber
-  if (aPagar <= EPS) return "Subordinado";
+  if (aPagar <= EPS) return "Subordinado"; // havia saldo, sêniores consumiram
   if (aPagar >= constituido - EPS) return "Integral";
   return "Parcial";
 }

@@ -101,6 +101,19 @@ describe("cascata de prioridade (5.2/5.3)", () => {
     expect(classificar(600, aPagarBeneficiario(ur, MEU))).toBe("Sem saldo informado");
   });
 
+  it("valor_ur = 0 (UR a constituir) → 'Sem saldo', NÃO 'Subordinado' (único sênior na fila)", () => {
+    const ur: UR = {
+      ur_id: "u-zero",
+      valor_ur: 0,
+      efeitos: [{ prioridade: 1, beneficiario_cnpj: MEU, valor_constituido: 2065.07 }],
+    };
+    const meu = aPagarBeneficiario(ur, MEU); // 0 (nada a distribuir)
+    expect(meu).toBe(0);
+    expect(classificar(2065.07, meu, ur.valor_ur)).toBe("Sem saldo");
+    // sem o valor_ur no classificar, cairia em Subordinado (comportamento antigo)
+    expect(classificar(2065.07, meu)).toBe("Subordinado");
+  });
+
   it("prioridade nula vai para o fim da fila (não fura a ordem do ônus)", () => {
     const ur: UR = {
       ur_id: "u7",

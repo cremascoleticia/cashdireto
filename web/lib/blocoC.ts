@@ -173,7 +173,7 @@ export async function getBlocoC(f: FiltrosC): Promise<ResultadoBlocoC> {
       constituidoMeu,
       oneradoTotalUR: res.oneradoTotal,
       aPagarMeu,
-      status: classificar(constituidoMeu, aPagarMeu),
+      status: classificar(constituidoMeu, aPagarMeu, ur.valor_ur),
     });
     const chave = ur.dataLiquidacao ?? "sem data";
     const ponto = porData.get(chave) ?? { data: chave, constituido: 0, aPagar: 0 };
