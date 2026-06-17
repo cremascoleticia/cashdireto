@@ -9,6 +9,7 @@ fonte tem o campo que identifica a loja (estabelecimento/usuário final/contrata
 """
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Mapping, Sequence
 
 # fonte (chave no contexto) → campo da linha que identifica a loja (CNPJ do estabelecimento)
@@ -68,10 +69,16 @@ def montar_contexto(dados: Mapping[str, Sequence[Mapping]],
 
 # ───────────────────────── Leitura do banco (casca fina) ─────────────────────────
 
+def _coerce(v):
+    """psycopg devolve `numeric` como Decimal; as funções de indicador operam em float.
+    Converte na fronteira de leitura (Decimal → float) p/ não quebrar `float += Decimal`."""
+    return float(v) if isinstance(v, Decimal) else v
+
+
 def _linhas(cur, sql: str) -> list[dict]:
     cur.execute(sql)
     cols = [c.name for c in cur.description]
-    return [dict(zip(cols, row)) for row in cur.fetchall()]
+    return [{c: _coerce(v) for c, v in zip(cols, row)} for row in cur.fetchall()]
 
 
 def ler_contexto(conn) -> dict:
