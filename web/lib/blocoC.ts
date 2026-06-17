@@ -201,6 +201,17 @@ export interface OpcoesFiltro {
   grupos: string[];
 }
 
+/** Beneficiário padrão para uma data: o maior por constituído NAQUELA foto (evita default vazio). */
+export async function beneficiarioPadrao(dataReferencia: string): Promise<string | null> {
+  const r = await consultar<{ cnpj: string }>(
+    `select beneficiario_cnpj cnpj from core.ur_efeitos
+     where data_referencia = $1 and beneficiario_cnpj is not null
+     group by beneficiario_cnpj order by coalesce(sum(valor_constituido),0) desc nulls last limit 1`,
+    [dataReferencia],
+  );
+  return r[0]?.cnpj ?? null;
+}
+
 export async function getOpcoesFiltro(): Promise<OpcoesFiltro> {
   const datas = (
     await consultar<{ d: string }>(

@@ -4,7 +4,7 @@
  */
 import Filtros from "@/components/Filtros";
 import GraficoCC1 from "@/components/GraficoCC1";
-import { getBlocoC, getOpcoesFiltro, type EscopoTipo, type FiltrosC } from "@/lib/blocoC";
+import { beneficiarioPadrao, getBlocoC, getOpcoesFiltro, type EscopoTipo, type FiltrosC } from "@/lib/blocoC";
 import type { StatusEfeito } from "@/lib/cascata";
 import { data as fmtData, moeda, porcentagem } from "@/lib/formato";
 
@@ -28,11 +28,13 @@ export default async function GarantiaPage({ searchParams }: { searchParams: SP 
   const escopoTipo = (["estabelecimento", "raiz", "grupo"].includes(searchParams.escopo ?? "")
     ? searchParams.escopo
     : "grupo") as EscopoTipo;
+  const dataReferencia = searchParams.data ?? opcoes.datas[0];
   const filtros: FiltrosC = {
-    beneficiario: searchParams.benef ?? opcoes.beneficiarios[0].cnpj,
+    beneficiario:
+      searchParams.benef ?? (await beneficiarioPadrao(dataReferencia)) ?? opcoes.beneficiarios[0].cnpj,
     escopoTipo,
     escopoValor: searchParams.valor || null,
-    dataReferencia: searchParams.data ?? opcoes.datas[0],
+    dataReferencia,
   };
 
   const { kpis, grafico, tabela } = await getBlocoC(filtros);
