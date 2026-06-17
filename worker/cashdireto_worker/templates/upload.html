@@ -4,20 +4,47 @@
 <p class="text-slate-600 mb-6">Suba os arquivos (RADAR, RAIOX, AP005, AP007, AP013, AP013A/B/C).
 O sistema detecta a fonte, carrega no banco e calcula os indicadores.</p>
 
-<form action="/processar" method="post" enctype="multipart/form-data"
+<form action="/processar" method="post" enctype="multipart/form-data" data-processar
       class="bg-white rounded-xl shadow p-6 flex flex-col gap-4 max-w-xl">
   <input type="file" name="arquivos" multiple required
          class="block w-full text-sm border border-slate-300 rounded-lg p-2">
-  <button class="bg-slate-900 text-white rounded-lg px-4 py-2 w-fit hover:bg-slate-700">
+  <button class="bg-slate-900 text-white rounded-lg px-4 py-2 w-fit hover:bg-slate-700
+                 disabled:opacity-60 disabled:cursor-not-allowed">
     Processar
   </button>
 </form>
 
-<form action="/recalcular" method="post" class="mt-3 max-w-xl">
-  <button class="text-sm text-slate-600 underline hover:text-slate-900">
+<form action="/recalcular" method="post" data-processar class="mt-3 max-w-xl">
+  <button class="text-sm text-slate-600 underline hover:text-slate-900
+                 disabled:opacity-60 disabled:cursor-not-allowed">
     Recalcular indicadores (a partir dos dados já carregados)
   </button>
 </form>
+
+<!-- Banner de progresso: arquivos grandes (AP005 com milhares de URs) levam alguns segundos -->
+<div id="processando" class="hidden mt-4 max-w-xl flex items-center gap-3 rounded-lg
+                             border border-amber-300 bg-amber-50 text-amber-800 px-4 py-3">
+  <svg class="animate-spin h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+  </svg>
+  <span class="text-sm">Processando… detectando a fonte, carregando no banco e recalculando os
+    indicadores. Arquivos grandes (AP005) podem levar alguns segundos — <b>não feche a página</b>.</span>
+</div>
+
+<script>
+  // Mostra o banner e trava o botão ao enviar qualquer um dos formulários de processamento.
+  document.querySelectorAll('form[data-processar]').forEach(function (form) {
+    form.addEventListener('submit', function () {
+      document.getElementById('processando').classList.remove('hidden');
+      form.querySelectorAll('button').forEach(function (b) {
+        b.disabled = true;
+        if (b.textContent.trim() === 'Processar') b.textContent = 'Processando…';
+      });
+    });
+  });
+</script>
 
 {% if resultados is defined %}
   <div class="mt-8">
