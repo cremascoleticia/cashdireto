@@ -31,6 +31,9 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-6">
             <span className="font-semibold">Cockpit de Recebíveis</span>
             <nav className="flex gap-4 text-sm">
+              <Link className="hover:underline" href="/cockpit">
+                Cockpit
+              </Link>
               <Link className="hover:underline" href="/garantia">
                 Gestão de garantia
               </Link>
