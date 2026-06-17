@@ -40,6 +40,12 @@ export default function RootLayout({
               <Link className="hover:underline" href="/raiox">
                 Raio-X de colateral
               </Link>
+              <Link className="hover:underline" href="/contratos">
+                Contratos / Gravames
+              </Link>
+              <Link className="hover:underline ml-auto opacity-90" href="/upload">
+                + Upload
+              </Link>
             </nav>
           </div>
         </header>

@@ -88,6 +88,23 @@ export function GraficoFila({
   );
 }
 
+export function GraficoGD1({ dados }: { dados: { contrato: string; registrado: number; captura: number }[] }) {
+  if (!dados.length) return <p className="text-sm text-slate-500">Sem contratos no filtro atual.</p>;
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(240, dados.length * 30)}>
+      <BarChart data={dados} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+        <XAxis type="number" tickFormatter={(v: number) => compacto.format(v)} tick={{ fontSize: 11 }} />
+        <YAxis type="category" dataKey="contrato" width={90} tick={{ fontSize: 10 }} />
+        <Tooltip formatter={fmtMoeda} />
+        <Legend />
+        <Bar dataKey="registrado" name="Registrado (nominal)" fill="#94a3b8" />
+        <Bar dataKey="captura" name="Que trava" fill="#0f766e" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function GraficoDistribuicao({ dados, rotuloX }: { dados: { posicao: string; n: number }[]; rotuloX?: string }) {
   if (!dados.length) return <p className="text-sm text-slate-500">Sem dados.</p>;
   return (
