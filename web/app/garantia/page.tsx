@@ -85,11 +85,15 @@ export default async function GarantiaPage({ searchParams }: { searchParams: SP 
               <tr>
                 <th className="p-2">UR</th>
                 <th className="p-2">Estabelecimento</th>
+                <th className="p-2">Titular da UR</th>
+                <th className="p-2">Bandeira</th>
                 <th className="p-2">Data de liquidação</th>
                 <th className="p-2 text-right">Posição na fila</th>
-                <th className="p-2 text-right">Constituído (meu)</th>
+                <th className="p-2">Regra</th>
+                <th className="p-2 text-right">Valor registrado (meu)</th>
                 <th className="p-2 text-right">Onerado total da UR</th>
-                <th className="p-2 text-right">A pagar (meu)</th>
+                <th className="p-2 text-right">A pagar / trava (meu)</th>
+                <th className="p-2 text-center">Credor &gt; 2ª?</th>
                 <th className="p-2">Status</th>
               </tr>
             </thead>
@@ -97,12 +101,16 @@ export default async function GarantiaPage({ searchParams }: { searchParams: SP 
               {tabela.slice(0, 500).map((r) => (
                 <tr key={r.ur_id} className="border-t border-slate-100">
                   <td className="p-2 font-mono text-xs">{r.ur_id.slice(0, 8)}</td>
-                  <td className="p-2">{r.estabelecimento}</td>
+                  <td className="p-2 font-mono text-xs">{r.estabelecimento}</td>
+                  <td className="p-2 font-mono text-xs">{r.titular ?? "—"}</td>
+                  <td className="p-2 text-xs">{r.arranjo ?? "—"}</td>
                   <td className="p-2">{fmtData(r.dataLiquidacao)}</td>
                   <td className="p-2 text-right">{r.minhaPosicao ?? "—"}</td>
+                  <td className="p-2 text-xs">{r.regra ?? "—"}</td>
                   <td className="p-2 text-right">{moeda(r.constituidoMeu)}</td>
                   <td className="p-2 text-right">{moeda(r.oneradoTotalUR)}</td>
                   <td className="p-2 text-right">{moeda(r.aPagarMeu)}</td>
+                  <td className="p-2 text-center">{r.credorAlem2a ? "sim" : "—"}</td>
                   <td className="p-2">
                     <Badge status={r.status} />
                   </td>

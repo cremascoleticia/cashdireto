@@ -3,8 +3,9 @@
  * KPIs (grupo/filial), C-B1/C-B2, G-B1 (travado por beneficiário), G-B2 (fila), risco, inventário,
  * tabela por gravame e por filial. Colunas que dependem de contrato (AP013) ficam indisponíveis.
  */
+import Link from "next/link";
 import FiltrosB from "@/components/FiltrosB";
-import { GraficoComparacao, GraficoFila, GraficoTravadoBenef } from "@/components/GraficosB";
+import { GraficoComparacao, GraficoDistribuicao, GraficoFila, GraficoTravadoBenef } from "@/components/GraficosB";
 import { getBlocoB, type EscopoTipo } from "@/lib/blocoB";
 import { getOpcoesFiltro } from "@/lib/blocoC";
 import { data as fmtData, moeda, porcentagem } from "@/lib/formato";
@@ -102,6 +103,11 @@ export default async function RaioXPage({ searchParams }: { searchParams: SP }) 
           v={String(c.ursFilaRasaDesprotegidas)}
           alerta={c.ursFilaRasaDesprotegidas > 0}
         />
+        <Callout
+          titulo="URs de fila profunda (prio > 2)"
+          v={String(c.ursFilaProfunda)}
+          alerta={c.ursFilaProfunda > 0}
+        />
         <Callout titulo="Horizonte da agenda" v={`${fmtData(c.horizonteInicio)} → ${fmtData(c.horizonteFim)}`} />
       </section>
 
@@ -115,44 +121,25 @@ export default async function RaioXPage({ searchParams }: { searchParams: SP }) 
           <Item k="Gravames sobre o grupo todo" v={inv.gravamesGrupoTodo} />
           <Item k="Gravames sobre 1 filial" v={inv.gravamesUmaFilial} />
           <Item k="Bandeiras / arranjos" v={inv.bandeiras} />
+          <Item k="Beneficiários distintos" v={inv.beneficiariosDistintos} />
           <Item k="URs com saldo" v={inv.ursComSaldo} />
         </div>
       </Card>
 
-      {/* Tabela por gravame */}
-      <Card titulo={`Por gravame / beneficiário (${r.porGravame.length})`} semPad>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-left text-slate-600">
-              <tr>
-                <th className="p-2">Credor (beneficiário)</th>
-                <th className="p-2 text-right">Posição na fila</th>
-                <th className="p-2">Bandeiras</th>
-                <th className="p-2 text-right">Valor registrado</th>
-                <th className="p-2 text-right">Valor que trava</th>
-                <th className="p-2 text-right">% da agenda do grupo</th>
-                <th className="p-2">Vigência</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.porGravame.slice(0, 300).map((g) => (
-                <tr key={g.beneficiario} className={`border-t border-slate-100 ${g.beneficiario === r.meuCnpj ? "bg-red-50" : ""}`}>
-                  <td className="p-2 font-mono text-xs">{g.beneficiario}</td>
-                  <td className="p-2 text-right">{g.posicaoFila ?? "—"}</td>
-                  <td className="p-2 text-xs">{g.arranjos}</td>
-                  <td className="p-2 text-right">{moeda(g.valorRegistrado)}</td>
-                  <td className="p-2 text-right">{moeda(g.valorQueTrava)}</td>
-                  <td className="p-2 text-right">{porcentagem(g.pctAgendaGrupo)}</td>
-                  <td className="p-2 text-xs text-slate-400" title="Requer AP013">indisp.</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="p-2 text-xs text-slate-400">
-          Vigência, filiais cobertas e % de dias cobertos dependem de AP013 (sem dado real ainda) — indisponíveis.
-        </p>
+      {/* Distribuição por posição na fila */}
+      <Card titulo="Distribuição de gravames por posição na fila">
+        <GraficoDistribuicao dados={r.distribuicaoPosicao} rotuloX="posição na fila" />
       </Card>
+
+      {/* A tabela-mestre de gravames/contratos é o Bloco D */}
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        A tabela completa de gravames/contratos (com vigência, abrangência, aproveitamento e status
+        Ativo/Órfão/Pontual) fica no{" "}
+        <Link className="text-teal-700 underline" href="/contratos">
+          Bloco D — Contratos / Gravames
+        </Link>
+        .
+      </div>
 
       {/* Tabela por filial */}
       <Card titulo={`Por filial (${r.porFilial.length})`} semPad>

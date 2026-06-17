@@ -61,7 +61,7 @@ export function GraficoTravadoBenef({ dados }: { dados: BarraTravadoBenef[] }) {
 export function GraficoFila({
   dados,
 }: {
-  dados: { data: string; registrado: number; profundidadeMax: number }[];
+  dados: { data: string; fixo: number; percentual: number; profundidadeMax: number }[];
 }) {
   if (!dados.length) return <p className="text-sm text-slate-500">Sem agenda no filtro atual.</p>;
   return (
@@ -69,16 +69,12 @@ export function GraficoFila({
       <ComposedChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis dataKey="data" tick={{ fontSize: 10 }} />
-        <YAxis
-          yAxisId="esq"
-          tickFormatter={(v: number) => compacto.format(v)}
-          tick={{ fontSize: 11 }}
-          width={70}
-        />
+        <YAxis yAxisId="esq" tickFormatter={(v: number) => compacto.format(v)} tick={{ fontSize: 11 }} width={70} />
         <YAxis yAxisId="dir" orientation="right" allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
-        <Tooltip />
+        <Tooltip formatter={fmtMoeda} />
         <Legend />
-        <Bar yAxisId="esq" dataKey="registrado" name="Valor registrado" fill="#94a3b8" />
+        <Bar yAxisId="esq" dataKey="fixo" name="Registrado (fixo)" stackId="r" fill="#0f766e" />
+        <Bar yAxisId="esq" dataKey="percentual" name="Registrado (%)" stackId="r" fill="#94a3b8" />
         <Line
           yAxisId="dir"
           type="monotone"
@@ -88,6 +84,21 @@ export function GraficoFila({
           strokeWidth={2}
         />
       </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function GraficoDistribuicao({ dados, rotuloX }: { dados: { posicao: string; n: number }[]; rotuloX?: string }) {
+  if (!dados.length) return <p className="text-sm text-slate-500">Sem dados.</p>;
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="posicao" tick={{ fontSize: 11 }} label={rotuloX ? { value: rotuloX, position: "insideBottom", offset: -2, fontSize: 11 } : undefined} />
+        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
+        <Tooltip />
+        <Bar dataKey="n" name="Nº de gravames" fill="#0f766e" />
+      </BarChart>
     </ResponsiveContainer>
   );
 }
